@@ -1,4 +1,4 @@
-import type { ResumeAnalysis, ResumeFormData } from '../types';
+import type { ResumeAnalysis, ResumeFormData, ChatMessage } from '../types';
 
 // ─── Expanded Job Role → Keywords map ────────────────────────────────────────
 export const JOB_KEYWORDS: Record<string, string[]> = {
@@ -365,7 +365,7 @@ export function generateChatResponse(message: string, analysis: ResumeAnalysis |
     const topSkills = keywords.found.slice(0, 3);
     const missingSkills = keywords.missing.slice(0, 2);
     const skillsToAsk = topSkills.length > 0 ? topSkills : missingSkills;
-    
+
     return `🕵️ **Skill & Role Confirmation**\n\nI see you're targeting the **${jobRole}** position. Based on industry standards, this role heavily relies on skills like **${skillsToAsk.join(', ')}**.\n\n**Do you have practical, hands-on experience with applying these skills in real-world projects or work environments?** (Reply Yes/No)`;
   }
 
@@ -438,4 +438,128 @@ export function generateChatResponse(message: string, analysis: ResumeAnalysis |
   }
 
   return `🤖 **AI Resume Coach**\n\nBased on your **${jobRole}** resume (Score: ${overallScore}/100), here are some insights:\n\n• Your ATS compatibility is ${atsCompatibility}%\n• You have ${keywords.found.length} matching ${jobRole} keywords\n• Top priority: ${improvementPlan[0]}\n\nAsk me about: **score**, **skills**, **experience**, **education**, **certifications**, **ATS**, **improvements**, or **strengths/weaknesses**!`;
+}
+
+// ─── AI Integration ───────────────────────────────────────────────────────────
+
+/**
+ * Analyzes a resume against a job description using Groq's API.
+ * 
+ * @param resumeText - The text content of the user's resume.
+ * @param jobDescription - The target job description.
+ * @returns The AI's analysis as a string (can be parsed to JSON if requested in prompt).
+ */
+export async function getAIAnalysis(resumeText: string, jobDescription: string): Promise<string> {
+  // Uses Vite's import.meta.env for environment variables
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("Groq API key is missing. Please set VITE_GROQ_API_KEY in your .env file.");
+  }
+
+  const endpoint = "https://api.groq.com/openai/v1/chat/completions";
+
+  const systemPrompt = `You are an expert Applicant Tracking System (ATS) and Senior Technical Recruiter.
+Your task is to analyze the provided resume against the given job description.
+Provide a clear, structured evaluation including:
+1. ATS Match Score (0-100%)
+2. Key matching skills
+3. Missing skills or gaps
+4. Concise recommendations to improve the resume for this specific role.
+Be highly objective, critical, and format your response clearly so it can be easily read by the user.`;
+
+  const userPrompt = `Job Description:\n${jobDescription}\n\nResume:\n${resumeText}\n\nPlease provide the ATS analysis.`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.5,
+        max_tokens: 1024,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Groq API Error: ${response.status} - ${errorData.error?.message || response.statusText}`);
+    }
+
+    // Handles response as a simple JSON object
+    const data = await response.json();
+    return data.choices[0].message.content;
+
+  } catch (error) {
+    console.error("Failed to fetch AI analysis:", error);
+    throw error;
+  }
+}
+
+/**
+ * Generates a chat response using Groq's API.
+ * 
+ * @param message - The user's new message.
+ * @param analysis - The current resume analysis.
+ * @param history - Previous chat messages.
+ * @returns The AI's response as a string.
+ */
+export async function generateGroqChatResponse(message: string, analysis: ResumeAnalysis | null, history: ChatMessage[] = []): Promise<string> {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("Groq API key is missing. Please set VITE_GROQ_API_KEY in your .env file.");
+  }
+
+  const endpoint = "https://api.groq.com/openai/v1/chat/completions";
+
+  let systemContent = "You are an expert AI Resume Coach and Technical Recruiter. Your job is to help the user improve their resume, prepare for interviews, and optimize for ATS systems. Be encouraging, concise, and format your responses with markdown (bullet points, bold text). ";
+
+  if (analysis) {
+    systemContent += `\n\nContext of the user's current resume analysis:\n- Target Role: ${analysis.jobRole}\n- Overall Score: ${analysis.overallScore}/100\n- ATS Compatibility: ${analysis.atsCompatibility}%\n- Strengths: ${analysis.strengths.join(', ')}\n- Weaknesses: ${analysis.weaknesses.join(', ')}\n- Missing Keywords: ${analysis.keywords.missing.slice(0, 5).join(', ')}`;
+  } else {
+    systemContent += "\n\nThe user has not uploaded a resume yet. Encourage them to upload or create one to get personalized advice.";
+  }
+
+  const apiMessages = [
+    { role: "system", content: systemContent },
+    ...history.map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.content
+    })),
+    { role: "user", content: message }
+  ];
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: apiMessages,
+        temperature: 0.7,
+        max_tokens: 1024,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Groq API Error: ${response.status} - ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+
+  } catch (error) {
+    console.error("Failed to fetch AI chat response:", error);
+    throw error;
+  }
 }

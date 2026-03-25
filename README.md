@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# AI Resume Analyzer 📄✨
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An intelligent, frontend-focused resume analyzer that provides a deep Applicant Tracking System (ATS) compatibility score, keyword matching, and personalized improvement tips. Built with React, TypeScript, and powered by the Groq API (Llama 3) for deep AI analysis and a live AI Resume Coach chatbot.
 
-Currently, two official plugins are available:
+## Features 🚀
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Resume Upload & Parsing**: Upload your resume (PDF/TXT) and instantly extract the text for analysis.
+- **ATS Compatibility Scoring**: Uses domain-specific keywords and logic to calculate an overall ATS score across distinct job roles (e.g., Frontend, Backend, Data Science).
+- **Deep Groq AI Analysis**: Connects with Llama-3.1-8b-instant to provide a thorough, highly objective review of your resume against industry standards.
+- **Interactive AI Coach**: A built-in chat interface powered by Groq allows you to ask targeted questions about your resume, missing skills, and how to improve your work experience section.
+- **Beautiful & Modern UI**: A rich, glassmorphism-inspired design with dynamic animations (Framer Motion) and modern typography (Tailwind CSS).
+- **Detailed Insights**: View your keyword strengths, identified weaknesses, ATS compatibility percentage, and a concrete action plan to improve.
 
-## React Compiler
+## Tech Stack 💻
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend Core**: React 18, Vite, TypeScript
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **PDF Parsing**: `pdfjs-dist`
+- **AI Integration**: Groq API (`llama-3.1-8b-instant`)
 
-## Expanding the ESLint configuration
+## Getting Started 🏁
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js (v18+)
+- A Groq API Key. You can get one securely from the [Groq Console](https://console.groq.com/).
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Installation
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/ai-resume-analyzer.git
+   cd ai-resume-analyzer
+   ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+3. **Configure Environment Variables:**
+   Create a `.env` file in the root directory and add your Groq API key:
+   ```env
+   VITE_GROQ_API_KEY=your_groq_api_key_here
+   ```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+4. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open your browser:**
+   Navigate to `http://localhost:5173` to see the app in action!
+
+## How It Works 🛠️
+
+1. **Parsing**: When you upload a PDF, `pdfjs-dist` securely extracts the text content entirely in your local browser.
+2. **Local Heuristics**: Our local rule-based system (`resumeAnalyzer.ts`) detects your likely target job role and calculates an initial score by matching against our extensive keyword database.
+3. **Deep AI Evaluation**: Clicking the "Generate Deep Analysis" button queries the Groq API. It uses custom prompt engineering to act as a Senior Technical ATS Recruiter to give you premium feedback.
+4. **Chatbot Context**: The AI Coach uses your resume's context and chat history to answer any specific questions you have.
+
+## License 📜
+
+Distributed under the MIT License. See `LICENSE` for more information.

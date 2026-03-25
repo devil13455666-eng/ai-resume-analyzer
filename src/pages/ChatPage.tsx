@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, Send, Bot, User, Sparkles, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { generateChatResponse } from '../lib/resumeAnalyzer';
+import { generateGroqChatResponse } from '../lib/resumeAnalyzer';
 import type { ChatMessage, ResumeAnalysis } from '../types';
 
 interface ChatPageProps {
@@ -69,19 +69,27 @@ export default function ChatPage({ analysis }: ChatPageProps) {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI thinking
-    await new Promise(r => setTimeout(r, 800 + Math.random() * 800));
-
-    const response = generateChatResponse(text, analysis, messages);
-    const aiMsg: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: response,
-      timestamp: new Date(),
-    };
-
-    setIsTyping(false);
-    setMessages(prev => [...prev, aiMsg]);
+    try {
+      const response = await generateGroqChatResponse(text, analysis, messages);
+      const aiMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, aiMsg]);
+    } catch (error) {
+      console.error(error);
+      const fallbackMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: "⚠️ **Error connecting to AI**\n\nI couldn't reach the AI service. Please make sure your `VITE_GROQ_API_KEY` is set in your `.env` file.",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, fallbackMsg]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const clearChat = () => {

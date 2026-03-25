@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, CheckCircle, XCircle, Tag, Zap, TrendingUp, AlertTriangle, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { BarChart3, CheckCircle, XCircle, Tag, Zap, TrendingUp, AlertTriangle, ChevronDown, ChevronUp, RefreshCw, Bot } from 'lucide-react';
 import ScoreRing from '../components/ScoreRing';
 import DomainSelector from '../components/DomainSelector';
-import { analyzeResumeText, DOMAIN_ROLES } from '../lib/resumeAnalyzer';
+import { analyzeResumeText, DOMAIN_ROLES, getAIAnalysis } from '../lib/resumeAnalyzer';
 import type { ResumeAnalysis } from '../types';
 
 interface AnalysisPageProps {
@@ -84,7 +84,24 @@ function SectionCard({ section, index }: { section: { name: string; score: numbe
 export default function AnalysisPage({ analysis, resumeText = '', onAnalysisUpdate }: AnalysisPageProps) {
   const [showRoleSwitch, setShowRoleSwitch] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [isGeneratingDeep, setIsGeneratingDeep] = useState(false);
+  const [deepAnalysisResult, setDeepAnalysisResult] = useState<string | null>(null);
+  const [deepAnalysisError, setDeepAnalysisError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const handleDeepAnalysis = async () => {
+    if (!resumeText || !analysis) return;
+    setIsGeneratingDeep(true);
+    setDeepAnalysisError(null);
+    try {
+      const result = await getAIAnalysis(resumeText, analysis.jobRole);
+      setDeepAnalysisResult(result);
+    } catch (err: any) {
+      setDeepAnalysisError("Make sure VITE_GROQ_API_KEY is properly configured in your .env file. " + err.message);
+    } finally {
+      setIsGeneratingDeep(false);
+    }
+  };
 
   const getDomainData = (role: string) => {
     for (const [, data] of Object.entries(DOMAIN_ROLES)) {
@@ -332,12 +349,49 @@ export default function AnalysisPage({ analysis, resumeText = '', onAnalysisUpda
           </div>
         </motion.div>
 
+        {/* Deep AI Analysis (Groq) */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card-glass p-6 mb-8">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <Bot size={18} style={{ color: '#ec4899' }} />
+              <h3 className="font-bold" style={{ fontFamily: 'Syne, sans-serif' }}>Deep Integration Analysis (Groq AI)</h3>
+            </div>
+            {!deepAnalysisResult && (
+              <button 
+                onClick={handleDeepAnalysis} 
+                className="btn-primary py-2 px-4 text-sm flex items-center gap-2"
+                disabled={isGeneratingDeep}
+                style={{ background: 'linear-gradient(135deg, #ec4899, #8b5cf6)' }}
+              >
+                {isGeneratingDeep ? <RefreshCw size={14} className="animate-spin" /> : <Bot size={14} />}
+                {isGeneratingDeep ? 'Analyzing...' : 'Generate Deep Analysis'}
+              </button>
+            )}
+          </div>
+          
+          {deepAnalysisError && (
+            <div className="p-4 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+              <AlertTriangle size={16} className="inline mr-2" />
+              {deepAnalysisError}
+            </div>
+          )}
+
+          {deepAnalysisResult && (
+            <div className="p-5 rounded-xl text-sm leading-relaxed whitespace-pre-wrap" style={{ background: 'rgba(30,45,74,0.4)', border: '1px solid rgba(30,45,74,0.8)' }}>
+              {deepAnalysisResult}
+            </div>
+          )}
+          {!deepAnalysisResult && !deepAnalysisError && (
+             <p className="text-sm text-slate-400">Unlock a real-time, deep ATS evaluation powered by Groq's Llama 3 model.</p>
+          )}
+        </motion.div>
+
         {/* CTA to Chat */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="rounded-2xl p-6 text-center"
-          style={{ background: 'linear-gradient(135deg, rgba(0,212,255,0.08), rgba(124,58,237,0.08))', border: '1px solid rgba(0,212,255,0.2)' }}
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           className="rounded-2xl p-6 text-center"
+           style={{ background: 'linear-gradient(135deg, rgba(0,212,255,0.08), rgba(124,58,237,0.08))', border: '1px solid rgba(0,212,255,0.2)' }}
         >
           <p className="text-slate-300 mb-4">Want personalized advice? Chat with your AI Resume Coach!</p>
           <button className="btn-primary" onClick={() => navigate('/chat')}>💬 Open AI Coach</button>
